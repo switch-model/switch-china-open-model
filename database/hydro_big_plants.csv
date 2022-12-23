@@ -1,0 +1,32 @@
+plant_name,province ,units ,capacity_gw,generation_twh,operating_hours
+Sanxia Hydro Power Plant ,Hubei ,"26 x 70, 2 x 5 ",18.3,84.4,4611
+Longtai Hydro power plant ,Guangxi ,7 x 70 ,4.9,11.5,2342
+Huaneng Lan Cang Jiang Hydro Power Company Xiaowan Power Plant ,Yunnan,6 x 70 ,4.2,14.4,4447
+Hanyuan Pubu Gou Hydro Power Plant ,Sichuan ,6 x 60 ,3.6,9.9,6634
+La Xi Wa Hydro Power Plant ,Qinghai ,5 x 70 ,3.5,9.7,3924
+Er'tan Hydro Power Plant ,Sichuan ,6 x 55 ,3.3,15.8,4784
+Gou Pi Tan Hydro Power Plant ,Guizhou,5 x 60 ,3,5.6,1861
+Ge Zhou Ba Hydro Power Plant ,Hubei ,"2 x 17, 19 x 12.5 ",2.72,16.1,5935
+Xiao Lang Di Hydro Power Plant ,Henan,"6 x 30, 4 x 3.5 ",1.94,5.7,2936
+Shui Bu Ya Hydro Power Plant ,Hubei ,4 x 46 ,1.84,3.4,1859
+Da Tang Peng Shui Hydro Power Plant ,Chongqing,5 x 35 ,1.75,4.9,2782
+Huaneng Lan Cang Jiang Hydro Power Company Jinghong Power Plant ,Yunnan,5 x 35 ,1.75,6.2,3529
+Bai Shan Hydro Power Plant ,Jilin ,"5 x 30, 4 x 5 ",1.7,3.5,2047
+Huaneng Manwan Hydro Power Plant ,Yunnan,"5 x 25, 1 x 30, 1 x 12 ",1.67,6.7,3990
+Li Jia Xia Hydro Power Plant ,Qinghai ,4 x 40,1.6,6.7,4174
+Gong Bo Xia Hydro Power Plant ,Qinghai ,5 x 30 ,1.5,5.9,3937
+Shui Kou Hydro Power Plant ,Fujian,7 x 20 ,1.4,7,4988
+Guotou Yunan Da Chao Shan Hydro Power Plant ,Yunnan,6 x 22.5,1.35,6.2,4611
+Liu Jia Xia Hydro Power Plant ,Gansu,"2 x 25.5, 2 x 26, 1 x 32 ",1.35,6.1,4500
+Tian Sheng Qiao #2 Hydro Power Plant ,Guizhou ,6 x 22,1.32,4.9,3691
+Long Yang Xia Hydro Power Plant ,Qinghai ,4 x 32 ,1.28,6.9,5403
+Wu Jiang Du Power Plant ,Guizhou,5 x 25,1.25,2.6,2052
+Ge He Yan Hydro Power Plant ,Hubei ,"2 x 30.6, 2 x 30 ",1.21,2.5,2054
+Da Tang Yan Tan Hydro Power Plant ,Guangxi ,4 x 30.25 ,1.21,6,4990
+Zhong Dian Tou Wu Qiang Xi Power Plant ,Hunan,5 x 24,1.2,5.5,4614
+Tian Sheng Qiao #1 Hydro Power Company ,Guizhou,4 x 30 ,1.2,3,2495
+Wan Jia Zhai Hydro Power Plant ,Shanxi,6 x 18 ,1.08,2.9,2653
+En Lin Hydro Power Plant ,Guizhou,4 x 26.25 ,1.05,2.5,2386
+Guang Zhao Hydro Power Plant ,Guizhou,4 x 26.25 ,1.04,1.9,1839
+Ji Shi Xia Power Plant ,Qinghai ,3 x 34 ,1.02,0.3,1763
+San Ban Xi Hydro Power Plant ,Guizhou ,4 x 25,1,1.3,1301

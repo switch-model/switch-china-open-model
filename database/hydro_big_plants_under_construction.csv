@@ -1,0 +1,17 @@
+plant_name,technology,province,latitude,longitude,capacity,start_year,first_year
+Xiluodu,Hydro_NonPumped,Yunnan,28.264444,103.646389,1386,2015,2013
+Baihetan,Hydro_NonPumped,Sichuan,28.251667,103.659444,1305,2020,2018
+Wudongde,Hydro_NonPumped,Sichuan,26.333889,102.63,870,2021,2019
+Xiangjiangba,Hydro_NonPumped,Yunnan,28.649167,104.370556,640,2014,2012
+Nuozhadu,Hydro_NonPumped,Yunnan,22.564167,100.513056,585,2014,2012
+Jinping level 2,Hydro_NonPumped,Sichuan,28.128333,101.790833,480,2014,2012
+Jinping level 1,Hydro_NonPumped,Sichuan,25.1825,101.631111,360,2015,2013
+Fengning Pump,Hydro_Pumped,Hebei,41.676111,116.549444,360,2023,2021
+Lianghekou,Hydro_NonPumped,Sichuan,30.162778,101.013611,300,2017,2015
+Changheba,Hydro_NonPumped,Sichuan,30.403611,102.118611,260,2018,2016
+Dagangshan,Hydro_NonPumped,Sichuan,29.448611,102.218611,260,2016,2014
+Guanyinyan,Hydro_NonPumped,Yunnan,26.521389,101.437778,240,2016,2014
+Liyuan,Hydro_NonPumped,Yunnan,27.661667,100.29,240,2017,2015
+Ludila,Hydro_NonPumped,Yunnan,26.189444,100.771944,216,2015,2013
+Ahai,Hydro_NonPumped,Yunnan,27.350556,100.506389,200,2015,2013
+Shuangjiangkou,Hydro_NonPumped,Sichuan,31.791389,101.934167,200,2017,2015
