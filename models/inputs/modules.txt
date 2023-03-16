@@ -16,7 +16,7 @@ switch_model.generators.extensions.storage
 switch_model.energy_sources.fuel_costs.markets
 switch_model.balancing.operating_reserves.areas
 switch_model.balancing.operating_reserves.spinning_reserves
-switch_model.balancing.operating_reserves.quickstart
+#switch_model.balancing.operating_reserves.quickstart
 switch_model.balancing.planning_reserves
 switch_model.transmission.transport.build
 switch_model.transmission.transport.dispatch
