@@ -1,14 +1,25 @@
 # SWITCH-China Open Model
 
-This repository has the database and inputs for the SWITCH model China study (SWITCH-China).
+This repository has the modules, database, and inputs for the SWITCH model China study (SWITCH-China).
 
 ## Overview
 
-The "inputs" files serve as an example of inputs that can be used to run SWITCH model for China study. The model was updated as much as 2020 base year, and it could serve as a foundation for our collective continuous efforts. You can update corresponding tables, e.g. technologies, capital costs, carbon prices, technology plans, fuel costs, and other inputs to meet your modeling needs. 
+The "inputs" files serve as an example of inputs that can be used to run SWITCH-China model. Modules extended by SWITCH-China are under "china-modules". The model was updated as much as 2020 base year, and it could serve as a foundation for our collective continuous efforts. You can update corresponding tables, e.g. technologies, capital costs, carbon prices, technology plans, fuel costs, and other inputs to meet your modeling needs. 
 
 ## Acknowledgements
 
-The database benefits from many people's work and contributions. This work is based on the SWITCH model created by Matthias Fripp. Gang He leads the efforts to aggregate the data, run the model, and write corresponding papers. Anne-Perrine Avrin contributed to the nuclear module and data processing. James Nelson, Josiah Johnston, Ana Mileva contributed an earlier version of SWITCH-China. Josiah Johnston facilitates greatly on the data management and new capabilities. Jianwei Tian developed an Excel-based 2020 China Power model which is a good resource for SWITCH-China. Bo Li and Patricia Hidalgo-Gonzalez contributed the EV modeling capability. Liqun Peng and Desmond Zhong contributed efforts to modeling storage and hydrogen. Qian Luo, Haozhe Yang, and collaborators have converted SWITCH-China to Gridpath version. Daniel M. Kammen is the director of RAEL at UC Berkeley, who envisions, supervises, and supports the SWITCH umbrella efforts. Jiang Lin of LBL advises and supports the low-cost renewables work. Denise Mauzerall advises and supports the storage strategy work. Model deployment, data collection and updates have benefited from Wenjia Cai, Yu Chen, Yuang Chen, Shiyu Huang, Jingxuan Hui, Haoran Li, Xu Liu, Hongyou Lu, Xiao Su, Yang Wang, Zheng Wang, Kate Yu, Shuyu Yang, Jiahai Yuan, Wenhua Zhang, Hongyang Zou, and many others.
+SWITCH-China presents as a testament to the collective dedication and brilliance of numerous individuals who have generously poured their time, expertise, and passion into its development. The foundation of this work rests upon the pioneering SWITCH model created by Matthias Fripp. Gang He leads the efforts to aggregate the data, develop/run the model, and write corresponding papers. 
+
+Anne-Perrine Avrin's contributions shine brightly in the nuclear module and data processing. Earlier iterations of SWITCH-China were enriched by the intellect of James Nelson, Josiah Johnston, and Ana Mileva, while Josiah Johnston's enduring commitment continues to profoundly impact data management and the integration of novel capabilities.
+
+Jianwei Tian's Excel-based 2020 China Power model emerges as a valuable resource that complements SWITCH-China. The EV modeling facet bears the imprint of Bo Li and Patricia Hidalgo-Gonzalez's expertise. The vital water implications dimension finds its representation through collaborating with Chao Zhang.
+
+Liqun Peng and Desmond Zhong's persistent efforts have lent depth to the model's treatment of storage and hydrogen dynamics. The transformation of SWITCH-China to its Gridpath incarnation is owed to Qian Luo, Haozhe Yang, Ana Mileva, Ranjit Deshmukh, and their collaborative partners.
+
+The visionary guidance of Daniel M. Kammen, the director of RAEL at UC Berkeley, is a driving force that propels and nurtures the overarching SWITCH umbrella initiative. The insights of Jiang Lin and Amol Phadke of LBL amplify the impact of our low-cost renewables study. Denise Mauzerall of Princeton University illuminates the strategic landscape of energy storage.
+
+The deployment, data collection, and iterative enhancements of the model have been enriched immeasurably by the support and dedication of Wenjia Cai, Yu Chen, Yuang Chen, Shiyu Huang, Jingxuan Hui, Haoran Li, Xu Liu, Hongyou Lu, Xiao Su, Yang Wang, Zheng Wang, Kate Yu, Shuyu Yang, Jiahai Yuan, Wenhua Zhang, Hongyang Zou, and a multitude of other unsung heroes who have lent their brilliance to this ever-evolving endeavor.
+
 
 ## Citations
 
@@ -22,7 +33,7 @@ Please cite the corresponding papers below to use the modules, data, and code of
 
 - Zhang, Chao, Gang He, Josiah Johnston, and Lijin Zhong. 2021. “Long-Term Transition of China’s Power Sector under Carbon Neutrality Target and Water Withdrawal Constraint.” _Journal of Cleaner Production_ 329: 129765. <https://doi.org/10.1016/j.jclepro.2021.129765>.
 
-- Peng, Liqun, Denise L. Mauzerall, Yaofeng D. Zhong, and Gang He. 2023. Heterogeneous Effects of Battery Storage Deployment Strategies on Decarbonization of Provincial Power Systems in China. _Nature Communications 14_ (1): 4858. <https://doi.org/10.1038/s41467-023-40337-3>
+- Peng, Liqun, Denise L. Mauzerall, Yaofeng D. Zhong, and Gang He. 2023. Heterogeneous Effects of Battery Storage Deployment Strategies on Decarbonization of Provincial Power Systems in China. _Nature Communications 14_ (1): 4858. <https://doi.org/10.1038/s41467-023-40337-3>.
 
 
 ### Related publications
