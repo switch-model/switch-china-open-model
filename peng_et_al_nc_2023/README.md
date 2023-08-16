@@ -13,7 +13,7 @@ Liqun Peng, Denise L. Mauzerall, Yaofeng D. Zhong, Gang He | 2023
 
 ## Acknowledgements
 
-This work was supported by the [Princeton University Library Open Access Fund](https://library.princeton.edu/services/scholarly-communications/oa-fund-program), the Princeton School of Public and International Affairs (D.L.M. and L.P.) and the Princeton International and Regional Studies program (L.P.). 
+This work was supported by the Princeton School of Public and International Affairs (D.L.M. and L.P.), the Princeton International and Regional Studies program (L.P.), and the [Princeton University Library Open Access Fund](https://library.princeton.edu/services/scholarly-communications/oa-fund-program). 
 G.H. was funded by the Global Energy Initiative at ClimateWorks Foundation (no. 23–2515). 
 We thank Matthias Fripp for the instructions and insights on SWITCH model updates. 
 We thank Nicolas Choquette-Levy for constructive comments on our manuscript.
