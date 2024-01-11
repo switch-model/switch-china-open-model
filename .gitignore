@@ -1,0 +1,10 @@
+# compiled Python files
+__pycache__
+*.pyc
+
+# macOS metadata
+.DS_Store
+Icon?
+
+# MS Office temp files
+~$*
