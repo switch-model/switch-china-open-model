@@ -1,0 +1,4 @@
+--solver cplex --solver-options-string "lpmethod=4"
+--suffix dual
+--stream-solver --verbose
+--no-save-solution
