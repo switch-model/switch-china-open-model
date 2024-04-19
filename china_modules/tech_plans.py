@@ -12,75 +12,78 @@ from pyomo.environ import *
 
 """
 Enable capacity plans which establish a minimum capacity target for a
-particular technology in given province & period. This supports both the wind, solar, & nuclear plans. 
+particular technology in given province & period. This supports both the wind, solar, & nuclear plans.
 
 Also enable upper limits on total generation capacity of particular
 technologies per period. This supports plans of national nuclear limits.
 """
 
+
 def define_components(mod):
     mod.CAPACITY_PLAN_INDEX = Set(
-        dimen=3,
-        within=mod.ENERGY_SOURCES * mod.LOAD_ZONES * mod.PERIODS)
+        dimen=3, within=mod.ENERGY_SOURCES * mod.LOAD_ZONES * mod.PERIODS
+    )
     mod.planned_capacity_mw = Param(mod.CAPACITY_PLAN_INDEX)
-    
+
     mod.TOTAL_CAPACITY_LIMIT_INDEX = Set(
-        dimen=2,
-        within=mod.ENERGY_SOURCES * mod.PERIODS)
+        dimen=2, within=mod.ENERGY_SOURCES * mod.PERIODS
+    )
     mod.total_capacity_limit_mw = Param(mod.TOTAL_CAPACITY_LIMIT_INDEX)
 
     # Only track for entries we are tracking to save time & RAM
     mod.CapacityByEnergySourceZonePeriod = Expression(
         mod.CAPACITY_PLAN_INDEX,
         # m:model; e: energy source; z: zone; p: period
-        rule=lambda m, e, z, p: (   
-            sum(m.GenCapacity[g, p]   
+        rule=lambda m, e, z, p: (
+            sum(
+                m.GenCapacity[g, p]
                 # use GENS_BY_TECHNOLOGY if using technology plan
                 for g in m.GENS_BY_ENERGY_SOURCE[e]
                 if m.gen_load_zone[g] == z
             )
-        )
+        ),
     )
     mod.Enforce_Capacity_Plan = Constraint(
         mod.CAPACITY_PLAN_INDEX,
         rule=lambda m, e, z, p: (
-            m.CapacityByEnergySourceZonePeriod[e,z,p] >= m.planned_capacity_mw[e,z,p]
-        )
+            m.CapacityByEnergySourceZonePeriod[e, z, p]
+            >= m.planned_capacity_mw[e, z, p]
+        ),
     )
-    
+
     mod.TotalCapByEnergySource = Expression(
         mod.TOTAL_CAPACITY_LIMIT_INDEX,
         rule=lambda m, e, p: (
             sum(m.GenCapacity[g, p] for g in m.GENS_BY_ENERGY_SOURCE[e])
-        )
+        ),
     )
     mod.Enforce_Total_Capacity_Limit = Constraint(
         mod.TOTAL_CAPACITY_LIMIT_INDEX,
         rule=lambda m, e, p: (
-             m.TotalCapByEnergySource[e,p] <= m.total_capacity_limit_mw[e,p]
-        )
+            m.TotalCapByEnergySource[e, p] <= m.total_capacity_limit_mw[e, p]
+        ),
     )
 
 
 def load_inputs(mod, switch_data, inputs_dir):
     """
-        Both files are optional.
-        
-        capacity_plans.csv
-        ENERGY_SOURCES LOAD_ZONES PERIOD planned_capacity_mw
+    Both files are optional.
 
-        total_capacity_limits.csv
-        ENERGY_SOURCES PERIOD total_capacity_limit_mw
+    capacity_plans.csv
+    ENERGY_SOURCES LOAD_ZONES PERIOD planned_capacity_mw
+
+    total_capacity_limits.csv
+    ENERGY_SOURCES PERIOD total_capacity_limit_mw
     """
     switch_data.load_aug(
-        filename=os.path.join(inputs_dir, 'capacity_plans.csv'),
+        filename=os.path.join(inputs_dir, "capacity_plans.csv"),
         optional=True,
-        auto_select=True,
         index=mod.CAPACITY_PLAN_INDEX,
-        param=(mod.planned_capacity_mw,))
+        param=(mod.planned_capacity_mw,),
+    )
     switch_data.load_aug(
-        filename=os.path.join(inputs_dir, 'total_capacity_limits.csv'),
+        filename=os.path.join(inputs_dir, "total_capacity_limits.csv"),
         optional=True,
-        auto_select=True,
         index=mod.TOTAL_CAPACITY_LIMIT_INDEX,
-        param=(mod.total_capacity_limit_mw,))
+        param=(mod.total_capacity_limit_mw,),
+    )
