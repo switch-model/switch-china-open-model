@@ -27,7 +27,7 @@ copydir("inputs", "inputs_start")
 # the solver (a lot). This feature is not needed for this study and generally
 # not needed in large power systems.
 gi = pd.read_csv("inputs_start/gen_info.csv", na_values=".")
-gi.loc[:, "gen_min_build_capacity"] = float("nan")
+gi["gen_min_build_capacity"] = float("nan")
 gi.to_csv("inputs_start/gen_info.csv", na_rep=".", index=False)
 
 # generate alternative carbon cap and cost files
@@ -92,9 +92,9 @@ atb_deflator = 127.215 / 118.866
 switch_china_deflator = 127.215 / 96.162
 
 fin = pd.read_csv("inputs_updated/financials.csv", na_values=".")
-fin[
-    "base_financial_year"
-] = 2022  # shouldn't affect LCOE or $/tonne calculations, but good to be consistent with other terms
+fin["base_financial_year"] = (
+    2022  # shouldn't affect LCOE or $/tonne calculations, but good to be consistent with other terms
+)
 
 bc = pd.read_csv("inputs_updated/gen_build_costs.csv", na_values=".")
 gi = pd.read_csv("inputs_updated/gen_info.csv", na_values=".")
@@ -183,6 +183,16 @@ bc.to_csv("inputs_updated/gen_build_costs.csv", na_rep=".", index=False)
 atb_sources = ["Storage", "Solar", "Wind"]  # from gi['gen_energy_source'].unique()
 gi.loc[gi["gen_energy_source"].isin(atb_sources), "gen_max_age"] = 30
 gi.loc[gi["gen_energy_source"].isin(atb_sources), "gen_variable_om"] = 0.0
+
+# Set storage to have plausible amounts of energy capacity (previously omitted and no
+# cost given per MWh, so it was accidentally treated as unlimited)
+gi["gen_storage_energy_to_power_ratio"] = "."
+gi.loc[gi["gen_tech"] == "Hydro_Pumped", "gen_storage_energy_to_power_ratio"] = 24
+gi.loc[gi["gen_tech"] == "Battery_Storage", "gen_storage_energy_to_power_ratio"] = 6
+
+# allow suspension of gens (TODO: keep a version of gi without this too)
+gi["gen_can_suspend"] = 1
+
 gi.to_csv("inputs_updated/gen_info.csv", na_rep=".", index=False)
 
 ############
@@ -194,9 +204,9 @@ with open("inputs_updated/modules.txt") as f:
 if not lines[-1].endswith("\n"):
     lines[-1] += "\n"
 # swap out the gen build module
-lines[
-    lines.index("switch_model.generators.core.build\n")
-] = "study_modules.gen_build_suspend\n"
+lines[lines.index("switch_model.generators.core.build\n")] = (
+    "study_modules.gen_build_suspend\n"
+)
 with open("inputs_updated/modules.txt", "w") as f:
     f.writelines(lines)
 
@@ -523,7 +533,7 @@ with open("inputs_updated/modules.txt", "w") as f:
     f.writelines(lines)
 
 # %%##################################
-# Use 2028, 2038, 2048, and optionally 2058 and 2068 instead of every
+# Use 2028 (maybe), 2038, 2048, and optionally 2058 and 2068 instead of every
 # 5 years from 2023-2048.
 # The longer series ensures we include most or all of the cost of fossil
 # plants built in 2048 or earlier that may not be
@@ -536,8 +546,13 @@ with open("inputs_updated/modules.txt", "w") as f:
 # periods, timepoints, timeseries,
 # zone_coincident_peak_demand
 
-for new_dir in ["inputs_extended", "inputs_sparse"]:
+for new_dir in [
+    "inputs_extended",
+    "inputs_sparse",
+    "inputs_short",
+]:
     extend = new_dir == "inputs_extended"
+    shrink = new_dir == "inputs_short"  # fewer periods and fewer timeseries
 
     # Copy base directory to new one, then write some custom files there.
     mkdir(new_dir)
@@ -580,9 +595,17 @@ for new_dir in ["inputs_extended", "inputs_sparse"]:
 
     # These need custom treatment:
     # periods, timepoints, timeseries,
-    period_list = [2028, 2038, 2048]
+
+    if shrink:
+        base_period_list = [2038, 2048]
+    else:
+        base_period_list = [2028, 2038, 2048]
     if extend:
-        period_list += [2058, 2068]
+        new_period_list = [2058, 2068]
+    else:
+        new_period_list = []
+    period_list = base_period_list + new_period_list
+
     periods = pd.DataFrame({"INVESTMENT_PERIOD": period_list})
     periods["period_start"] = periods["INVESTMENT_PERIOD"]
     periods["period_end"] = periods["period_start"] + 9
@@ -601,12 +624,24 @@ for new_dir in ["inputs_extended", "inputs_sparse"]:
     timeseries["ts_scale_to_period"] *= 2
 
     # add extra periods if needed
-    if extend:
-        for p in [2058, 2068]:
-            new = timeseries.query("ts_period == 2048").copy()
-            new.loc[:, "ts_period"] = p
-            new["TIMESERIES"] = new["TIMESERIES"].str.replace("2050", str(p + 2))
-            timeseries = pd.concat([timeseries, new], axis=0)
+    for p in new_period_list:
+        new = timeseries.query("ts_period == 2048").copy()
+        new.loc[:, "ts_period"] = p
+        new["TIMESERIES"] = new["TIMESERIES"].str.replace("2050", str(p + 2))
+        timeseries = pd.concat([timeseries, new], axis=0)
+
+    if shrink:
+        # gather weight from all months into the subsequent multiple-of-4 month
+        orig_cols = timeseries.columns
+        timeseries["m"] = timeseries["TIMESERIES"].str[5:7].astype(int)
+        timeseries["gm"] = ((timeseries["m"] - 1) // 6) * 6 + 6
+        timeseries["month"] = timeseries["TIMESERIES"].str[:7]
+        timeseries["group_month"] = timeseries["TIMESERIES"].str[:5] + timeseries[
+            "gm"
+        ].astype(str).str.zfill(2)
+        weight = timeseries.groupby("group_month")["ts_scale_to_period"].sum()
+        timeseries["ts_scale_to_period"] = timeseries["month"].map(weight)
+        timeseries = timeseries.dropna(subset="ts_scale_to_period")[orig_cols]
 
     timeseries.to_csv(os.path.join(new_dir, "timeseries.csv"), index=False)
 
@@ -615,14 +650,13 @@ for new_dir in ["inputs_extended", "inputs_sparse"]:
         .merge(timeseries[["TIMESERIES"]], left_on="timeseries", right_on="TIMESERIES")
         .drop("TIMESERIES", axis=1)
     )
-    if extend:
-        for p in [2058, 2068]:
-            new_tag = str(p + 2)
-            new = timepoints[timepoints["timeseries"].str.startswith("2050.")].copy()
-            new["timepoint_id"] = new["timepoint_id"].str.replace("2050", new_tag)
-            new["timestamp"] = new["timestamp"].str.replace("2050", new_tag)
-            new["timeseries"] = new["timeseries"].str.replace("2050", new_tag)
-            timepoints = pd.concat([timepoints, new], axis=0)
+    for p in new_period_list:
+        new_tag = str(p + 2)
+        new = timepoints[timepoints["timeseries"].str.startswith("2050.")].copy()
+        new["timepoint_id"] = new["timepoint_id"].str.replace("2050", new_tag)
+        new["timestamp"] = new["timestamp"].str.replace("2050", new_tag)
+        new["timeseries"] = new["timeseries"].str.replace("2050", new_tag)
+        timepoints = pd.concat([timepoints, new], axis=0)
 
     timepoints.to_csv(os.path.join(new_dir, "timepoints.csv"), index=False)
 
@@ -660,15 +694,14 @@ for new_dir in ["inputs_extended", "inputs_sparse"]:
                 "inputs_updated/gen_build_predetermined.csv", na_values="."
             )
             predet_rows = df.merge(predet[["GENERATION_PROJECT", "build_year"]])
-            df = pd.concat([predet_rows, df.loc[df[col].isin([2028, 2038, 2048]), :]])
+            df = pd.concat([predet_rows, df.loc[df[col].isin(base_period_list), :]])
         else:
-            df = df.loc[df[col].isin([2028, 2038, 2048]), :]
+            df = df.loc[df[col].isin(base_period_list), :]
 
-        if extend:
-            for p in [2058, 2068]:
-                new_row = df.loc[df[col] == 2048, :].copy()
-                new_row.loc[:, col] = p
-                df = pd.concat([df, new_row], axis=0)
+        for p in new_period_list:
+            new_row = df.loc[df[col] == 2048, :].copy()
+            new_row.loc[:, col] = p
+            df = pd.concat([df, new_row], axis=0)
 
         df = df.sort_values(df.columns.to_list())
         df.to_csv(os.path.join(new_dir, tbl + ".csv"), na_rep=".", index=False)
@@ -687,11 +720,10 @@ for new_dir in ["inputs_extended", "inputs_sparse"]:
             timepoints["timepoint_id"], left_on=col, right_on="timepoint_id"
         ).drop("timepoint_id", axis=1)
 
-        if extend:
-            for p in [2058, 2068]:
-                new = df[df[col].str.startswith("2050.")].copy()
-                new[col] = new[col].str.replace("2050", str(p + 2))
-                df = pd.concat([df, new], axis=0)
+        for p in new_period_list:
+            new = df[df[col].str.startswith("2050.")].copy()
+            new[col] = new[col].str.replace("2050", str(p + 2))
+            df = pd.concat([df, new], axis=0)
 
         df.to_csv(os.path.join(new_dir, tbl + ".csv"), na_rep=".", index=False)
 
@@ -708,22 +740,102 @@ for new_dir in ["inputs_extended", "inputs_sparse"]:
         df = df.merge(timeseries["TIMESERIES"], left_on=col, right_on="TIMESERIES")
         if col == "timeseries":
             df = df.drop("TIMESERIES", axis=1)
-        if extend:
-            for p in [2058, 2068]:
-                new = df[df[col].str.startswith("2050.")].copy()
-                new[col] = new[col].str.replace("2050", str(p + 2))
-                df = pd.concat([df, new], axis=0)
+        for p in new_period_list:
+            new = df[df[col].str.startswith("2050.")].copy()
+            new[col] = new[col].str.replace("2050", str(p + 2))
+            df = pd.concat([df, new], axis=0)
 
         df.to_csv(os.path.join(new_dir, tbl + ".csv"), na_rep=".", index=False)
 
 
+# %% ###################################
+# Make fewer-zones version of inputs_short called inputs_short_small.
+# This could eventually be used for the other versions too.
+def drop_rows(inputs_dir, files, default_col, keep):
+    for x in files:
+        try:
+            tbl, col = x
+        except ValueError:  # not a tuple
+            tbl, col = x, default_col
+        file = os.path.join(inputs_dir, tbl + ".csv")
+        df = pd.read_csv(file, na_values=".")
+        if not col in df.columns:
+            # try capitalizing
+            if col.upper() in df.columns:
+                col = col.upper()
+            else:
+                raise ValueError(
+                    f"column {col} not found in {tbl}:\n{df.columns.to_list()}"
+                )
+        df = df.loc[df[col].isin(keep), :]
+        df.to_csv(file, na_rep=".", index=False)
+
+
+id = "inputs_short_small"
+copydir("inputs_short", id)
+keep_zones = pd.read_csv(f"{id}/load_zones.csv", na_values=".").query(
+    'zone_balancing_area == "East_China"'
+)["LOAD_ZONE"]
+keep_gens = pd.read_csv(f"{id}/gen_info.csv", na_values=".").query(
+    "gen_load_zone.isin(@keep_zones)"
+)["GENERATION_PROJECT"]
+keep_prr = pd.read_csv(
+    f"{id}/planning_reserve_requirement_zones.csv", na_values="."
+).query("LOAD_ZONE.isin(@keep_zones)")["PLANNING_RESERVE_REQUIREMENTS"]
+
+drop_rows(
+    id,
+    [
+        ("capacity_plans", "load_zones"),
+        "fuel_cost",
+        ("fuel_supply_curves", "regional_fuel_market"),
+        "load_zones",
+        "loads",
+        "planning_reserve_requirement_zones",
+        ("regional_fuel_markets", "regional_fuel_market"),
+        ("transmission_lines", "trans_lz1"),
+        ("transmission_lines", "trans_lz2"),
+        "zone_coincident_peak_demand",
+        "zone_to_regional_fuel_market",
+    ],
+    "load_zone",
+    keep_zones,
+)
+
+drop_rows(
+    id,
+    [
+        "gen_build_predetermined",
+        ("hydro_timeseries", "hydro_project"),
+        "variable_capacity_factors",
+        "gen_build_costs",
+        "gen_info",
+        "gen_part_load_heat_rates",
+        "gen_build_costs.no_ccs",
+        "gen_build_costs.no_ccs_h2",
+        "gen_info.no_ccs",
+        "gen_info.no_ccs_h2",
+        ("gen_retrofits", "base_gen_project"),
+        ("gen_retrofits.no_ccs", "base_gen_project"),
+    ],
+    "generation_project",
+    keep_gens,
+)
+
+drop_rows(
+    id, ["planning_reserve_requirements"], "PLANNING_RESERVE_REQUIREMENTS", keep_prr
+)
+
 # %%##################################
 # Everything above wrote to the inputs_sparse or inputs_extended directory. Now
-# we create <base_dir>_reserves directories based on those. These have extra timeseries
-# with higher load and low weight, to represent rare conditions with extra-high
-# load or low renewables. The default is 10% extra load, but loads.res20.csv and
-# loads.res30.csv give higher super-peak loads.
-
+# we create <base_dir>_reserves directories based on those. These have extra
+# timeseries with higher load and low weight, to represent rare conditions with
+# extra-high load or low renewables. The default is 10% extra load, but
+# loads.res20.csv and loads.res30.csv give higher super-peak loads.
+#
+# Note: We don't add reserves to inputs_short because it only has two days per
+# period for fast testing.)
+#
 # The tough days are found by running the inputs_extended model with 0% and 200%
 # carbon limits, with planning reserves turned off and spinning reserves (3+5)
 # turned on. (no spinning reserve rule was applied in the original model,
@@ -732,169 +844,189 @@ for new_dir in ["inputs_extended", "inputs_sparse"]:
 # days with the highest load-weighted marginal cost from energy_sources.csv.
 
 co2_levels = ["000", "200"]
+all_expensive_days_exist = True
 with open("scenarios_find_expensive_days.txt", "w") as f:
     for co2_level in co2_levels:
         f.write(
-            f"--scenario-name {co2_level} --input-alias carbon_policies.csv=carbon_policies_{co2_level}.csv --outputs-dir out_tough_days/carbon_{co2_level}_spin_only --inputs-dir inputs_extended --exclude-module switch_model.balancing.planning_reserves --include-module study_modules.spinning_reserves_35\n"
+            f"--scenario-name {co2_level} --input-alias carbon_policies.csv=carbon_policies_{co2_level}.csv --outputs-dir out_expensive_days/carbon_{co2_level}_spin_only --inputs-dir inputs_extended --exclude-module switch_model.balancing.planning_reserves --include-module study_modules.spinning_reserves_35\n"
         )
+        if not os.path.exists(f"out_expensive_days/carbon_{co2_level}_spin_only/energy_sources_{co2_level}.csv"):
+            all_expensive_days_exist = False
 
-run = input(
-    "Would you like to solve the scenarios to find difficult days to serve?\n"
-    "If not, previous results will be used if available. y/[n] "
-)
+if all_expensive_days_exist:
+    message = (
+        "Would you like to solve the scenarios to update the list of most difficult days\n"
+        "to serve? This can be time-consuming. If not, previous results will be used instead.\n"
+        "Choice: y/[n] "
+    )
+else:
+    message = (
+        "Would you like to solve the scenarios to find difficult days to serve?\n"
+        "This can take a long time, but is necessary to generate inputs_*_reserves scenarios.\n"
+        "Choice: y/[n] "
+    )
+
+run = input(message)
 if run in {"y", "yes"}:
     with tempfile.TemporaryDirectory() as sq:
         cmd = f"switch solve-scenarios --scenario-list scenarios_find_expensive_days.txt --debug --scenario-queue {sq}"
         subprocess.run(cmd.split(), check=True)
+    all_expensive_days_exist = True
 
-# find dates to duplicate
-new_ts = pd.DataFrame()
-for co2_level in co2_levels:
-    es = pd.read_csv(
-        f"out_tough_days/carbon_{co2_level}_spin_only/energy_sources_{co2_level}.csv"
+if all_expensive_days_exist:
+    # find dates to duplicate
+    new_ts = pd.DataFrame()
+    for co2_level in co2_levels:
+        es = pd.read_csv(
+            f"out_expensive_days/carbon_{co2_level}_spin_only/energy_sources_{co2_level}.csv"
+        )
+        es["expenditure"] = es["zone_demand_mw"] * es["marginal_cost"]
+        es["timeseries"] = es["timepoint_label"].str[:10].str.replace("-", ".")
+        daily = es.groupby(["period", "timeseries"])[
+            ["zone_demand_mw", "expenditure"]
+        ].sum()
+        daily["mean_price"] = daily["expenditure"] / daily["zone_demand_mw"]
+        # are high load days the expensive ones?
+        # daily.xs(2048, level="period").plot.scatter(x="zone_demand_mw", y="mean_price")
+        expensive = daily.loc[daily.groupby("period")["mean_price"].idxmax()]
+        ts = expensive.index.to_frame(index=False)
+        ts["new_timeseries"] = (
+            ts["period"].astype(str) + ".res." + co2_level
+        )  # must not look like a float
+        new_ts = pd.concat([new_ts, ts[["timeseries", "new_timeseries"]]], axis=0)
+
+    # we make versions of both sparse and extended so we can see how much that
+    # matters with reserve requirements in place.
+    for base_dir in ["inputs_extended", "inputs_sparse"]:
+        new_dir = f"{base_dir}_reserves"
+
+        # Copy base directory to new_dir, then update files there.
+        copydir(base_dir, new_dir)
+
+        # Remove switch_model.balancing.planning_reserves because it applies
+        # unusable fossil plants to meet PRM; instead we use a spinning reserves and
+        # add a day with extra load. Note that outage derating gives about a 5%
+        # margin and adding a 10% super-peak load day (later) gets us up to a 15%
+        # planning reserve margin, similar to the planning_reserves module, but in a
+        # more reliable way.
+        for mod_file in [
+            "modules.txt",
+            "modules.no_suspend.txt",
+            "modules.no_ccs_h2.txt",
+        ]:
+            lines = []
+            with open(os.path.join(new_dir, mod_file)) as f:
+                for line in f:
+                    if line.strip() == "switch_model.balancing.planning_reserves":
+                        line = "# (removed) " + line
+                    lines.append(line)
+            # add module to apply 3+5 rule even if not specified
+            # (original model didn't specify a rule, so it didn't run with
+            # spinning reserves)
+            if not lines[-1].endswith("\n"):
+                lines[-1] += "\n"
+            lines.append("study_modules.spinning_reserves_35\n")
+            if not "no_ccs_h2" in mod_file:
+                # build enough hydrogen storage capacity to cover the reserve days
+                lines.append("study_modules.hydrogen_tank_reserves\n")
+            with open(os.path.join(new_dir, mod_file), "w") as f:
+                f.writelines(lines)
+
+        # update timeseries, timepoints, hydro_timeseries, loads,
+        # variable_capacity_factors
+
+        # add new difficult days to timeseries with weights equivalent to 15 days each (30 total)
+        # every 3 years, i.e., a 30-day heat wave every 3 years. This is 50 days each in 10 years.
+        timeseries = pd.read_csv(os.path.join(new_dir, "timeseries.csv"), na_values=".")
+        new = (
+            new_ts.rename({"timeseries": "TIMESERIES"}, axis=1)
+            .merge(timeseries)
+            .drop("TIMESERIES", axis=1)
+            .rename({"new_timeseries": "TIMESERIES"}, axis=1)
+            .assign(ts_scale_to_period=50)  # treat each sample as 50-in-10-years
+        )
+        # reduce weight on the others to make room for the extra 100 heat wave days
+        # per 10 years
+        timeseries["ts_scale_to_period"] *= 1 - (100 / 3650)
+        timeseries = pd.concat([timeseries, new], axis=0)
+        timeseries.to_csv(os.path.join(new_dir, "timeseries.csv"), na_rep=".", index=False)
+
+        # save hydrogen_tank_reserve_days.csv to increase hydrogen availability to
+        # reflect the fact that these events occur every 3 years, but are 3 times as
+        # long when they do occur
+        occurrences = new[["TIMESERIES"]].assign(ts_years_between_occurrence=3)
+        occurrences.to_csv(
+            os.path.join(new_dir, "hydrogen_tank_reserve_days.csv"), na_rep=".", index=False
+        )
+
+        timepoints = pd.read_csv(os.path.join(new_dir, "timepoints.csv"), na_values=".")
+        new = (
+            new_ts.merge(timepoints)
+            .drop("timeseries", axis=1)
+            .rename({"new_timeseries": "timeseries"}, axis=1)
+            .rename({"timepoint_id": "timepoint"}, axis=1)
+        )
+        # add ".000" or ".200" (emission level for tough-day scenario) tag to timepoint
+        new["new_timepoint"] = new["timepoint"] + new["timeseries"].str[-4:]
+        # save new timepoints to use in other files
+        new_tp = new[["timepoint", "new_timepoint"]]
+        new = new.drop("timepoint", axis=1).rename(
+            {"new_timepoint": "timepoint_id"}, axis=1
+        )
+        # move the peak dates into a different calendar year for graphing
+        new["timestamp"] = new["timestamp"].str[:3] + "1" + new["timestamp"].str[4:]
+        timepoints = pd.concat([timepoints, new], axis=0)
+        timepoints.to_csv(os.path.join(new_dir, "timepoints.csv"), na_rep=".", index=False)
+
+        timeseries_tables = ["hydro_timeseries", "hydrogen_tank_reserve_days"]
+        for t in timeseries_tables:
+            file = os.path.join(new_dir, t + ".csv")
+            df = pd.read_csv(file, na_values=".")
+            col = "timeseries"
+            if col not in df.columns:
+                col = col.upper()
+            new = new_ts.merge(df, left_on="timeseries", right_on=col)
+            new[col] = new["new_timeseries"]  # put in same place as original col
+            new = new.drop("new_timeseries", axis=1)
+            if col != "timeseries":
+                new = new.drop("timeseries", axis=1)
+            df = pd.concat([df, new], axis=0)
+            df.to_csv(file, na_rep=".", index=False)
+
+        timepoint_tables = ["loads", "variable_capacity_factors"]
+        for t in timepoint_tables:
+            file = os.path.join(new_dir, t + ".csv")
+            df = pd.read_csv(file, na_values=".")
+            col = "timepoint"
+            if col not in df.columns:
+                col = col.upper()
+            new = new_tp.merge(df, left_on="timepoint", right_on=col)
+            new[col] = new["new_timepoint"]  # put in same place as original col
+            new = new.drop("new_timepoint", axis=1)
+            if col != "timepoint":
+                new = new.drop("timepoint", axis=1)
+            if t == "loads":
+                # raise tough-day loads by 10, 20 or 30%
+                for reserve_level in [0.1, 0.2, 0.3]:
+                    res = new.copy()
+                    res["zone_demand_mw"] *= 1 + reserve_level
+                    final_df = pd.concat([df, res], axis=0)
+                    final_df.to_csv(
+                        file.replace("loads.", f"loads.res{int(reserve_level*100):02d}."),
+                        na_rep=".",
+                        index=False,
+                    )
+                    if reserve_level == 0.1:
+                        # use 10% as the base case too
+                        final_df.to_csv(file, na_rep=".", index=False)
+            else:
+                final_df = pd.concat([df, new], axis=0)
+                final_df.to_csv(file, na_rep=".", index=False)
+else:
+    print(
+        "No most-difficult-day information available.\n"
+        "inputs_*_reserves directories were not created."
     )
-    es["expenditure"] = es["zone_demand_mw"] * es["marginal_cost"]
-    es["timeseries"] = es["timepoint_label"].str[:10].str.replace("-", ".")
-    daily = es.groupby(["period", "timeseries"])[
-        ["zone_demand_mw", "expenditure"]
-    ].sum()
-    daily["mean_price"] = daily["expenditure"] / daily["zone_demand_mw"]
-    # are high load days the expensive ones?
-    # daily.xs(2048, level="period").plot.scatter(x="zone_demand_mw", y="mean_price")
-    expensive = daily.loc[daily.groupby("period")["mean_price"].idxmax()]
-    ts = expensive.index.to_frame(index=False)
-    ts["new_timeseries"] = (
-        ts["period"].astype(str) + ".res." + co2_level
-    )  # must not look like a float
-    new_ts = pd.concat([new_ts, ts[["timeseries", "new_timeseries"]]], axis=0)
-
-# we make versions of both sparse and extended so we can see how much that
-# matters with reserve requirements in place
-for base_dir in ["inputs_extended", "inputs_sparse"]:
-    new_dir = f"{base_dir}_reserves"
-
-    # Copy base directory to new_dir, then update files there.
-    copydir(base_dir, new_dir)
-
-    # Remove switch_model.balancing.planning_reserves because it applies
-    # unusable fossil plants to meet PRM; instead we use a spinning reserves and
-    # add a day with extra load. Note that outage derating gives about a 5%
-    # margin and adding a 10% super-peak load day (later) gets us up to a 15%
-    # planning reserve margin, similar to the planning_reserves module, but in a
-    # more reliable way.
-    for mod_file in [
-        "modules.txt",
-        "modules.no_suspend.txt",
-        "modules.no_ccs_h2.txt",
-    ]:
-        lines = []
-        with open(os.path.join(new_dir, mod_file)) as f:
-            for line in f:
-                if line.strip() == "switch_model.balancing.planning_reserves":
-                    line = "# (removed) " + line
-                lines.append(line)
-        # add module to apply 3+5 rule even if not specified
-        # (original model didn't specify a rule, so it didn't run with
-        # spinning reserves)
-        if not lines[-1].endswith("\n"):
-            lines[-1] += "\n"
-        lines.append("study_modules.spinning_reserves_35\n")
-        if not "no_ccs_h2" in mod_file:
-            # build enough hydrogen storage capacity to cover the reserve days
-            lines.append("study_modules.hydrogen_tank_reserves\n")
-        with open(os.path.join(new_dir, mod_file), "w") as f:
-            f.writelines(lines)
-
-    # update timeseries, timepoints, hydro_timeseries, loads,
-    # variable_capacity_factors
-
-    # add new difficult days to timeseries with weights equivalent to 15 days each (30 total)
-    # every 3 years, i.e., a 30-day heat wave every 3 years. This is 50 days each in 10 years.
-    timeseries = pd.read_csv(os.path.join(new_dir, "timeseries.csv"), na_values=".")
-    new = (
-        new_ts.rename({"timeseries": "TIMESERIES"}, axis=1)
-        .merge(timeseries)
-        .drop("TIMESERIES", axis=1)
-        .rename({"new_timeseries": "TIMESERIES"}, axis=1)
-        .assign(ts_scale_to_period=50)  # treat each sample as 50-in-10-years
-    )
-    # reduce weight on the others to make room for the extra 100 heat wave days
-    # per 10 years
-    timeseries["ts_scale_to_period"] *= 1 - (100 / 3650)
-    timeseries = pd.concat([timeseries, new], axis=0)
-    timeseries.to_csv(os.path.join(new_dir, "timeseries.csv"), na_rep=".", index=False)
-
-    # save hydrogen_tank_reserve_days.csv to increase hydrogen availability to
-    # reflect the fact that these events occur every 3 years, but are 3 times as
-    # long when they do occur
-    occurrences = new[["TIMESERIES"]].assign(ts_years_between_occurrence=3)
-    occurrences.to_csv(
-        os.path.join(new_dir, "hydrogen_tank_reserve_days.csv"), na_rep=".", index=False
-    )
-
-    timepoints = pd.read_csv(os.path.join(new_dir, "timepoints.csv"), na_values=".")
-    new = (
-        new_ts.merge(timepoints)
-        .drop("timeseries", axis=1)
-        .rename({"new_timeseries": "timeseries"}, axis=1)
-        .rename({"timepoint_id": "timepoint"}, axis=1)
-    )
-    # add ".000" or ".200" (emission level for tough-day scenario) tag to timepoint
-    new["new_timepoint"] = new["timepoint"] + new["timeseries"].str[-4:]
-    # save new timepoints to use in other files
-    new_tp = new[["timepoint", "new_timepoint"]]
-    new = new.drop("timepoint", axis=1).rename(
-        {"new_timepoint": "timepoint_id"}, axis=1
-    )
-    # move the peak dates into a different calendar year for graphing
-    new["timestamp"] = new["timestamp"].str[:3] + "1" + new["timestamp"].str[4:]
-    timepoints = pd.concat([timepoints, new], axis=0)
-    timepoints.to_csv(os.path.join(new_dir, "timepoints.csv"), na_rep=".", index=False)
-
-    timeseries_tables = ["hydro_timeseries", "hydrogen_tank_reserve_days"]
-    for t in timeseries_tables:
-        file = os.path.join(new_dir, t + ".csv")
-        df = pd.read_csv(file, na_values=".")
-        col = "timeseries"
-        if col not in df.columns:
-            col = col.upper()
-        new = new_ts.merge(df, left_on="timeseries", right_on=col)
-        new[col] = new["new_timeseries"]  # put in same place as original col
-        new = new.drop("new_timeseries", axis=1)
-        if col != "timeseries":
-            new = new.drop("timeseries", axis=1)
-        df = pd.concat([df, new], axis=0)
-        df.to_csv(file, na_rep=".", index=False)
-
-    timepoint_tables = ["loads", "variable_capacity_factors"]
-    for t in timepoint_tables:
-        file = os.path.join(new_dir, t + ".csv")
-        df = pd.read_csv(file, na_values=".")
-        col = "timepoint"
-        if col not in df.columns:
-            col = col.upper()
-        new = new_tp.merge(df, left_on="timepoint", right_on=col)
-        new[col] = new["new_timepoint"]  # put in same place as original col
-        new = new.drop("new_timepoint", axis=1)
-        if col != "timepoint":
-            new = new.drop("timepoint", axis=1)
-        if t == "loads":
-            # raise tough-day loads by 10, 20 or 30%
-            for reserve_level in [0.1, 0.2, 0.3]:
-                res = new.copy()
-                res["zone_demand_mw"] *= 1 + reserve_level
-                final_df = pd.concat([df, res], axis=0)
-                final_df.to_csv(
-                    file.replace("loads.", f"loads.res{int(reserve_level*100):02d}."),
-                    na_rep=".",
-                    index=False,
-                )
-                if reserve_level == 0.1:
-                    # use 10% as the base case too
-                    final_df.to_csv(file, na_rep=".", index=False)
-        else:
-            final_df = pd.concat([df, new], axis=0)
-            final_df.to_csv(file, na_rep=".", index=False)
 
 # %% Define scenarios for the study
 
@@ -943,3 +1075,5 @@ with open("scenarios_carbon_cap.txt", "w") as f:
             f.write(
                 f"--scenario-name carbon_{cap}_{scen} --inputs-dir {in_dir} --outputs-dir out_carbon_cap/carbon_{cap}_{scen} --input-alias carbon_policies.csv=carbon_policies_{cap}.csv {extra}\n"
             )
+
+
