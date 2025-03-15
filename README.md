@@ -4,11 +4,11 @@ This repository has the modules, database, and inputs for the SWITCH model China
 
 ## Overview
 
-The "inputs" files serve as an example of inputs that can be used to run SWITCH-China model. Modules extended by SWITCH-China are under "china-modules". The model was updated as much as 2020 base year, and it could serve as a foundation for our collective continuous efforts. You can update corresponding tables, e.g. technologies, capital costs, carbon prices, technology plans, fuel costs, and other inputs to meet your modeling needs. 
+The "inputs" files serve as an example of inputs that can be used to run SWITCH-China model. Modules extended by SWITCH-China are under "china_modules". The model was updated as much as 2020 base year, and it could serve as a foundation for our collective continuous efforts. You can update corresponding tables, e.g. technologies, capital costs, carbon prices, technology plans, fuel costs, and other inputs to meet your modeling needs.
 
 ## Acknowledgements
 
-SWITCH-China presents as a testament to the collective dedication and brilliance of numerous individuals who have generously poured their time, expertise, and passion into its development. The foundation of this work rests upon the pioneering SWITCH model created by Matthias Fripp. Gang He leads the efforts to aggregate the data, develop/run the model, and write corresponding papers. 
+SWITCH-China presents as a testament to the collective dedication and brilliance of numerous individuals who have generously poured their time, expertise, and passion into its development. The foundation of this work rests upon the pioneering SWITCH model created by Matthias Fripp. Gang He leads the efforts to aggregate the data, develop/run the model, and write corresponding papers.
 
 Anne-Perrine Avrin's contributions shine brightly in the nuclear module and data processing. Earlier iterations of SWITCH-China were enriched by the intellect of James Nelson, Josiah Johnston, and Ana Mileva, while Josiah Johnston's enduring commitment continues to profoundly impact data management and the integration of novel capabilities.
 
@@ -23,7 +23,7 @@ The deployment, data collection, and iterative enhancements of the model have be
 
 ## Citations
 
-Please cite the corresponding papers below to use the modules, data, and code of SWITCH-China. 
+Please cite the corresponding papers below to use the modules, data, and code of SWITCH-China.
 
 ### Core publications
 
